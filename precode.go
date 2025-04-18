@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var cafeList = map[string][]string{
@@ -49,21 +50,26 @@ func mainHandle(w http.ResponseWriter, req *http.Request) {
 }
 
 func TestMainHandlerWhenCountMoreThanTotal(t *testing.T) {
-	totalCount := 4
-	req, err := http.NewRequest("GET", "/cafe?count=10&city=moscow", nil) // здесь нужно создать запрос к сервису
-	if err != nil {
-		t.Fatalf("Ошибка при создании запроса: %v", err)
-	}
+	totalCount := 4 // максимальное количество кафе, которое сервис может вернуть
 
+	// Создаём запрос с параметрами count=10 и city=moscow
+	req, err := http.NewRequest("GET", "/cafe?count=10&city=moscow", nil)
+	require.NoError(t, err, "Ошибка при создании запроса") // Используем require, чтобы сразу остановить тест в случае ошибки
+
+	// Записываем ответ
 	responseRecorder := httptest.NewRecorder()
+
+	// Создаём обработчик
 	handler := http.HandlerFunc(mainHandle)
 	handler.ServeHTTP(responseRecorder, req)
 
-	// здесь нужно добавить необходимые проверки
+	// Проверка, что статус-код ответа - 200
 	assert.Equal(t, http.StatusOK, responseRecorder.Code, "Неверный статус-код ответа")
 
+	// Проверка, что в ответе не пустое тело
 	assert.NotEmpty(t, responseRecorder.Body.String(), "Тело ответа пустое")
 
+	// Проверка, что количество кафе не больше доступного
 	cafesReturned := strings.Split(responseRecorder.Body.String(), ",")
 	assert.Len(t, cafesReturned, totalCount, "Количество кафе в ответе неверное")
 }
